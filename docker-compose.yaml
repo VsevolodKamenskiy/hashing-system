@@ -1,8 +1,114 @@
 services:
   service1:
-
-    ...
+    build:
+      context: service1
+    depends_on:
+      graylog:
+        condition: service_started
+      consul:
+        condition: service_started
+    ports:
+      - "50051:50051"
   service2:
-    ...
+    build:
+      context: service2
+#    environment:
+#      HASHER_ADDR: "service1:50051"
+#      DATABASE_DSN: "postgres://postgres:postgres@db:5432/hash?sslmode=require"
+#      HTTP_ADDR: ":8080"
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      service1:
+        condition: service_started
+      migrator:
+        condition: service_completed_successfully
+      graylog:
+        condition: service_started
+      consul:
+        condition: service_started
   db:
-    image: postgres
+    image: postgres:14.18
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: hash
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d hash"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+  migrator:
+    image: kukymbr/goose-docker:latest
+    environment:
+      - GOOSE_DRIVER=postgres
+      - GOOSE_DBSTRING=host=db port=5432 user=postgres password=postgres dbname=hash
+      - GOOSE_VERBOSE=true
+      - GOOSE_COMMAND=up
+      - GOOSE_COMMAND_ARG=-dir=/migrations
+    volumes:
+      - ./service2/internal/storage/migrations:/migrations:ro
+    depends_on:
+      db:
+        condition: service_healthy
+  mongo:
+    image: mongo:3
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.8.11
+    environment:
+      - http.host=0.0.0.0
+      - transport.host=localhost
+      - network.host=0.0.0.0
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  graylog:
+    image: graylog/graylog:3.3
+    environment:
+      - GRAYLOG_PASSWORD_SECRET=somepasswordpepper
+      - GRAYLOG_ROOT_PASSWORD_SHA2=8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918
+      - GRAYLOG_HTTP_EXTERNAL_URI=http://127.0.0.1:9000/
+    depends_on:
+      elasticsearch:
+        condition: service_started
+      mongo:
+        condition: service_started
+    ports:
+      # Graylog web interface and REST API
+      - 9000:9000
+      # Syslog TCP
+      - 1514:1514
+      # Syslog UDP
+      - 1514:1514/udp
+      # GELF TCP
+      - 12201:12201
+      # GELF UDP
+      - 12201:12201/udp
+  consul:
+    image: hashicorp/consul:1.16
+    command: consul agent -server -ui -bootstrap -client=0.0.0.0 -data-dir=/consul/data -config-dir=/consul/config
+    ports:
+      - "8500:8500"     # HTTP API/UI
+      - "8600:8600/udp" # DNS
+    healthcheck:
+      test: [ "CMD", "consul", "info" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - ./consul_data:/consul/data
+      - ./consul_config:/consul/config
+volumes:
+  consul_data:

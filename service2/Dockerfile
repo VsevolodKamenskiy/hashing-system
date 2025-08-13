@@ -1,6 +1,7 @@
 FROM golang:1.24 AS builder
 WORKDIR /service2
 COPY . /service2
+RUN go mod tidy && go mod download
 RUN GO111MODULE=auto CGO_ENABLED=0 GOOS=linux GOPROXY=https://proxy.golang.org go build -o main cmd/app/main.go
 
 FROM alpine:latest
