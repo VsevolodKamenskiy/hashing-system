@@ -32,6 +32,7 @@ func main() {
 		werr := errors.WithStack(err)
 		log.WithField("stack", fmt.Sprintf("%+v", werr)).WithError(werr).
 			Error("failed to listen")
+		return
 	}
 
 	grpcServer := grpc.NewServer(
