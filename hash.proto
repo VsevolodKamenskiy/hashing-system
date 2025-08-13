@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package hasher;
+
+option go_package = "proto/hasherpb";
+
+service HasherService {
+  // Получить список хэшей от переданных строк
+  rpc CalculateHashes (HashRequest) returns (HashResponse);
+}
+
+// Вход: список строк
+message HashRequest {
+  repeated string strings = 1;
+}
+
+// Выход: список хэшей в том же порядке
+message HashResponse {
+  repeated string hashes = 1;
+}
