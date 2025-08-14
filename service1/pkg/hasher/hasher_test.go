@@ -7,15 +7,6 @@ import (
 	"time"
 )
 
-// helper: вычисление ожидаемых хэшей (последовательно)
-func mustHashSeq(t *testing.T, in []string) []string {
-	t.Helper()
-	ctx := context.Background()
-	out, err := HashStringsParallel(ctx, in) // допускаем переиспользовать саму реализацию
-	require.NoError(t, err)
-	return out
-}
-
 func TestHashStringsParallel_Empty(t *testing.T) {
 	ctx := context.Background()
 	out, err := HashStringsParallel(ctx, nil)
@@ -60,21 +51,26 @@ func TestHashStringsParallel_Large(t *testing.T) {
 func TestHashStringsParallel_CancelEarly(t *testing.T) {
 	// Проверим корректную отмену: контекст отменяется до завершения
 	// Для надёжности дадим большой вход, чтобы были активные горутины
-	in := make([]string, 500000)
+	in := make([]string, 5000000)
 	for i := range in {
 		in[i] = "x"
 	}
 
+	start := make(chan struct{})
+
 	ctx, cancel := context.WithCancel(context.Background())
-	// отменим быстро
+
 	go func() {
-		time.Sleep(1 * time.Millisecond)
-		cancel()
+		start <- struct{}{}
+		out, err := HashStringsParallel(ctx, in)
+		require.Error(t, err)
+		require.Nil(t, out)
 	}()
 
-	out, err := HashStringsParallel(ctx, in)
-	require.Error(t, err)
-	require.Nil(t, out)
+	// отменим быстро
+	<-start
+	cancel()
+
 }
 
 func TestHashStringsParallel_RespectsDeadline(t *testing.T) {

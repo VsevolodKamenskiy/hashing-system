@@ -52,7 +52,7 @@ func UnaryServerLogger(log *logrus.Logger) grpc.UnaryServerInterceptor {
 
 		if err != nil {
 			werr := errors.WithStack(err)
-			log.WithField("stack", fmt.Sprintf("%+v", werr)).WithError(err).Error("rpc end with error")
+			entry.WithField("stack", fmt.Sprintf("%+v", werr)).WithError(err).Error("rpc end with error")
 		} else {
 			entry.Info("rpc end")
 		}
