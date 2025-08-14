@@ -43,6 +43,8 @@ func main() {
 	defer store.Close()
 
 	hashCl, err := grpcclient.New(fmt.Sprintf("service1:%s", appCfg.HasherPort))
+	defer hashCl.Close()
+
 	if err != nil {
 		werr := errors.WithStack(err)
 		logg.WithField("stack", fmt.Sprintf("%+v", werr)).WithError(werr).

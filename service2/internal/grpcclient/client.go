@@ -11,6 +11,7 @@ import (
 
 type HasherClient interface {
 	Calculate(ctx context.Context, strings []string) ([]string, error)
+	Close() error
 }
 
 type client struct {
@@ -38,4 +39,9 @@ func (cl *client) Calculate(ctx context.Context, strings []string) ([]string, er
 		return nil, err
 	}
 	return resp.GetHashes(), nil
+}
+
+func (cl *client) Close() error {
+	err := cl.conn.Close()
+	return err
 }
