@@ -1,6 +1,8 @@
 package config
 
 import (
+	"context"
+
 	consulapi "github.com/hashicorp/consul/api"
 	"github.com/pkg/errors"
 )
@@ -11,7 +13,7 @@ type AppConfig struct {
 	HTTPPort   string
 }
 
-func Load(consulAddr string) (*AppConfig, error) {
+func Load(ctx context.Context, consulAddr string) (*AppConfig, error) {
 
 	cfg := &AppConfig{}
 
@@ -32,7 +34,8 @@ func Load(consulAddr string) (*AppConfig, error) {
 
 	// helper: get string value by key with fallback to current value
 	getKV := func(key, current string) string {
-		pair, _, err := kv.Get(key, nil)
+		opts := (&consulapi.QueryOptions{}).WithContext(ctx)
+		pair, _, err := kv.Get(key, opts)
 		if err != nil || pair == nil || len(pair.Value) == 0 {
 			return current
 		}
