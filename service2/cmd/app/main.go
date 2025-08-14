@@ -25,7 +25,7 @@ func main() {
 
 	logg := mw.NewLogger("service2")
 
-	appCfg, err := config.Load("consul:8500")
+	appCfg, err := config.Load(rootCtx, "consul:8500")
 	if err != nil {
 		werr := errors.WithStack(err)
 		logg.WithField("stack", fmt.Sprintf("%+v", werr)).WithError(err).
