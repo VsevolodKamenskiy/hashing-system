@@ -3,41 +3,11 @@ package grpcclient
 import (
 	"context"
 
-	logging "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"service2/internal/mw"
 	hasherpb "service2/proto/hasherpb"
 )
-
-type logrusLogger struct {
-	*logrus.Logger
-}
-
-func (l *logrusLogger) Log(ctx context.Context, level logging.Level, msg string, fields ...any) {
-	entry := logrus.NewEntry(l.Logger)
-	for i := 0; i+1 < len(fields); i += 2 {
-		key, ok := fields[i].(string)
-		if !ok {
-			continue
-		}
-		entry = entry.WithField(key, fields[i+1])
-	}
-	switch level {
-	case logging.LevelDebug:
-		entry.Debug(msg)
-	case logging.LevelInfo:
-		entry.Info(msg)
-	case logging.LevelWarn:
-		entry.Warn(msg)
-	case logging.LevelError:
-		entry.Error(msg)
-	default:
-		entry.Info(msg)
-	}
-}
 
 type HasherClient interface {
 	Calculate(ctx context.Context, strings []string) ([]string, error)
@@ -50,18 +20,9 @@ type client struct {
 }
 
 func New(addr string, extra ...grpc.DialOption) (HasherClient, error) {
-	logger := &logrusLogger{logrus.New()}
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithChainUnaryInterceptor(
-			logging.UnaryClientInterceptor(logger, logging.WithFieldsFromContext(func(ctx context.Context) logging.Fields {
-				if id := mw.FromContext(ctx); id != "" {
-					return logging.Fields{"request_id", id}
-				}
-				return nil
-			})),
-			UnaryClientInjectRequestID(),
-		),
+		grpc.WithChainUnaryInterceptor(UnaryClientInjectRequestID()),
 	}
 	opts = append(opts, extra...)
 

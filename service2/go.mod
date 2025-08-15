@@ -7,10 +7,7 @@ require (
 	github.com/gemnasium/logrus-graylog-hook/v3 v3.2.1
 	github.com/gin-gonic/gin v1.10.1
 	github.com/google/uuid v1.6.0
-	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.2
-	github.com/hashicorp/consul/api v1.32.1
 	github.com/jackc/pgx/v5 v5.7.5
-	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
 	google.golang.org/grpc v1.74.2
 	google.golang.org/protobuf v1.36.6
@@ -29,6 +26,7 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.20.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
+	github.com/hashicorp/consul/api v1.32.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-hclog v1.5.0 // indirect
@@ -51,6 +49,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
