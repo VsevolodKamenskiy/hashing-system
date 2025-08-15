@@ -57,8 +57,6 @@ services:
         condition: service_healthy
   mongo:
     image: mongo:3
-    volumes:
-      - mongo_data:/data/db
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.8.11
@@ -98,8 +96,6 @@ services:
       - 12201:12201
       # GELF UDP
       - 12201:12201/udp
-    volumes:
-      - graylog_data:/usr/share/graylog/data
   consul:
     image: hashicorp/consul:1.16
     command: consul agent -server -ui -bootstrap -client=0.0.0.0 -data-dir=/consul/data -config-dir=/consul/config
@@ -116,5 +112,3 @@ services:
       - ./consul_config:/consul/config
 volumes:
   consul_data:
-  mongo_data:
-  graylog_data:
