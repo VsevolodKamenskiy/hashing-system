@@ -6,9 +6,11 @@ import (
 	formatters "github.com/fabienm/go-logrus-formatters"
 	graylog "github.com/gemnasium/logrus-graylog-hook/v3"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"service1/internal/server"
@@ -36,7 +38,10 @@ func main() {
 	}
 
 	grpcServer := grpc.NewServer(
-		grpc.ChainUnaryInterceptor(server.UnaryServerLogger(log)),
+		grpc.ChainUnaryInterceptor(
+			server.UnaryServerLogger(log),
+			server.UnaryServerMetrics(),
+		),
 	)
 
 	srv := &server.Server{
@@ -45,6 +50,13 @@ func main() {
 	}
 
 	hasherpb.RegisterHasherServiceServer(grpcServer, srv)
+
+	go func() {
+		if err := http.ListenAndServe(":2112", promhttp.Handler()); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			werr := errors.WithStack(err)
+			log.WithField("stack", fmt.Sprintf("%+v", werr)).WithError(werr).Error("metrics server failed")
+		}
+	}()
 
 	go func() {
 		log.Infoln("Starting Service 1 on port 50051...")

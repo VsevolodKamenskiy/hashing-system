@@ -9,6 +9,7 @@ services:
         condition: service_started
     ports:
       - "50051:50051"
+      - "2112:2112"
   service2:
     build:
       context: service2
