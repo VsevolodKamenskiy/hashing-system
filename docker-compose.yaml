@@ -114,6 +114,28 @@ services:
     volumes:
       - ./consul_data:/consul/data
       - ./consul_config:/consul/config
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+  grafana:
+    image: grafana/grafana:latest
+    links:
+      - prometheus:prometheus
+    volumes:
+      - ./data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=login # тут логин для входа
+      - GF_SECURITY_ADMIN_PASSWORD=pass #тут значения пароля для входа
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+
 volumes:
   consul_data:
   mongo_data:
