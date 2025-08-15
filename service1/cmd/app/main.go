@@ -52,7 +52,9 @@ func main() {
 	hasherpb.RegisterHasherServiceServer(grpcServer, srv)
 
 	go func() {
-		if err := http.ListenAndServe(":2112", promhttp.Handler()); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		mux := http.NewServeMux()
+		mux.Handle("/metrics", promhttp.Handler())
+		if err := http.ListenAndServe(":2112", mux); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			werr := errors.WithStack(err)
 			log.WithField("stack", fmt.Sprintf("%+v", werr)).WithError(werr).Error("metrics server failed")
 		}
