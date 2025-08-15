@@ -57,6 +57,7 @@ func TestHashStringsParallel_CancelEarly(t *testing.T) {
 	}
 
 	start := make(chan struct{})
+	defer close(start)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
