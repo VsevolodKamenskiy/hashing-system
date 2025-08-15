@@ -3,5 +3,5 @@ scrape_configs:
     scrape_interval: 5s
     static_configs:
       - targets:
-          - service1:50051
+          - service1:2112
           - service2:8080
