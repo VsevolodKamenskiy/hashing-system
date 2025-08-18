@@ -6,6 +6,7 @@ import (
 	formatters "github.com/fabienm/go-logrus-formatters"
 	graylog "github.com/gemnasium/logrus-graylog-hook/v3"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -37,10 +38,14 @@ func main() {
 		return
 	}
 
+	grpcMetrics := server.NewServerMetrics()
+	prometheus.MustRegister(grpcMetrics)
+
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			server.UnaryServerLogger(log),
-			server.UnaryServerMetrics(),
+			server.UnaryRequestID(log),
+			server.LoggingInterceptor(log),
+			grpcMetrics.UnaryServerInterceptor(),
 		),
 	)
 
@@ -50,6 +55,7 @@ func main() {
 	}
 
 	hasherpb.RegisterHasherServiceServer(grpcServer, srv)
+	grpcMetrics.InitializeMetrics(grpcServer)
 
 	go func() {
 		mux := http.NewServeMux()
