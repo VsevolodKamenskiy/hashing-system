@@ -64,8 +64,9 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
+	logg.Printf("staring service2 on %s...", httpAddr)
 	go func() {
-		logg.Printf("service2 listening on %s", httpAddr)
+
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			werr := errors.WithStack(err)
 			logg.WithField("stack", fmt.Sprintf("%+v", werr)).WithError(werr).

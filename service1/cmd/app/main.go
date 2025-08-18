@@ -43,7 +43,7 @@ func main() {
 
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			server.UnaryRequestID(log),
+			//server.UnaryRequestID(log),
 			server.LoggingInterceptor(log),
 			grpcMetrics.UnaryServerInterceptor(),
 		),
@@ -66,8 +66,9 @@ func main() {
 		}
 	}()
 
+	log.Infoln("Starting Service 1 on port 50051...")
 	go func() {
-		log.Infoln("Starting Service 1 on port 50051...")
+
 		if err := grpcServer.Serve(listener); err != nil {
 			werr := errors.WithStack(err)
 			log.WithField("stack", fmt.Sprintf("%+v", werr)).WithError(werr).
