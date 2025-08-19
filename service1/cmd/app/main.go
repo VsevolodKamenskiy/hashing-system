@@ -43,7 +43,7 @@ func main() {
 
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			//server.UnaryRequestID(log),
+			server.UnaryRequestID(log),
 			server.LoggingInterceptor(log),
 			grpcMetrics.UnaryServerInterceptor(),
 		),
