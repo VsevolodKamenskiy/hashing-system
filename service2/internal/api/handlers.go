@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 
 	"service2/internal/grpcclient"
@@ -19,6 +21,8 @@ type Handlers struct {
 	HashClient grpcclient.HasherClient
 	Store      *storage.Store
 	Log        *logrus.Logger
+	Cache      *redis.Client
+	CacheTTL   time.Duration
 }
 
 // POST /send
@@ -65,6 +69,14 @@ func (h *Handlers) Send(c *gin.Context) {
 		ID   int64  `json:"id"`
 		Hash string `json:"hash"`
 	}
+	if h.Cache != nil {
+		for _, r := range rows {
+			if err := h.Cache.Set(c.Request.Context(), fmt.Sprintf("hash:%d", r.ID), r.Hash, h.CacheTTL).Err(); err != nil {
+				h.Log.WithField("request_id", reqID).WithError(err).Error("send: cache set failed")
+			}
+		}
+	}
+
 	out := make([]resp, 0, len(rows))
 	for _, r := range rows {
 		out = append(out, resp{ID: r.ID, Hash: r.Hash})
@@ -104,14 +116,49 @@ func (h *Handlers) Check(c *gin.Context) {
 	reqID := mw.FromContext(c.Request.Context())
 	h.Log.WithField("request_id", reqID).WithField("ids", ids).Info("check: start")
 
-	rows, err := h.Store.GetByIDs(c.Request.Context(), ids)
-	if err != nil {
-		werr := errors.WithStack(err)
-		h.Log.WithField("request_id", mw.FromContext(c.Request.Context())).
-			WithField("stack", fmt.Sprintf("%+v", werr)).WithError(werr).
-			Error("check: db failed")
-		c.Status(http.StatusInternalServerError)
-		return
+	ctx := c.Request.Context()
+	var rows []storage.HashRow
+	miss := ids
+	if h.Cache != nil {
+		keys := make([]string, len(ids))
+		for i, id := range ids {
+			keys[i] = fmt.Sprintf("hash:%d", id)
+		}
+		vals, err := h.Cache.MGet(ctx, keys...).Result()
+		if err != nil {
+			h.Log.WithField("request_id", reqID).WithError(err).Error("check: cache get failed")
+		} else {
+			miss = make([]int64, 0)
+			for i, v := range vals {
+				if v != nil {
+					if s, ok := v.(string); ok {
+						rows = append(rows, storage.HashRow{ID: ids[i], Hash: s})
+					}
+				} else {
+					miss = append(miss, ids[i])
+				}
+			}
+		}
+	}
+
+	if len(miss) > 0 {
+		dbRows, err := h.Store.GetByIDs(ctx, miss)
+		if err != nil {
+			werr := errors.WithStack(err)
+			h.Log.WithField("request_id", mw.FromContext(c.Request.Context())).
+				WithField("stack", fmt.Sprintf("%+v", werr)).WithError(werr).
+				Error("check: db failed")
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+		rows = append(rows, dbRows...)
+		if h.Cache != nil {
+			for _, r := range dbRows {
+				if err := h.Cache.Set(ctx, fmt.Sprintf("hash:%d", r.ID), r.Hash, h.CacheTTL).Err(); err != nil {
+					h.Log.WithField("request_id", reqID).WithError(err).Error("check: cache set failed")
+				}
+			}
+		}
 	}
 	if len(rows) == 0 {
 		c.Status(http.StatusNoContent)
