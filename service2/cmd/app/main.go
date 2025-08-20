@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/redis/go-redis/v9"
+
 	"service2/internal/api"
 	"service2/internal/grpcclient"
 	"service2/internal/mw"
@@ -51,7 +53,16 @@ func main() {
 			Fatal("grpc client failed")
 	}
 
-	h := &api.Handlers{HashClient: hashCl, Store: store, Log: logg}
+	rdb := redis.NewClient(&redis.Options{Addr: appCfg.RedisAddr})
+	if err := rdb.Ping(rootCtx).Err(); err != nil {
+		werr := errors.WithStack(err)
+		logg.WithField("stack", fmt.Sprintf("%+v", werr)).WithError(werr).
+			Error("redis connect failed")
+		return
+	}
+	defer rdb.Close()
+
+	h := &api.Handlers{HashClient: hashCl, Store: store, Log: logg, Cache: rdb, CacheTTL: appCfg.CacheTTL}
 	r := api.NewRouter(h, logg)
 
 	httpAddr := fmt.Sprintf(":%s", appCfg.HTTPPort)

@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"time"
 
 	consulapi "github.com/hashicorp/consul/api"
 	"github.com/pkg/errors"
@@ -11,6 +12,8 @@ type AppConfig struct {
 	HasherPort string
 	DBDSN      string
 	HTTPPort   string
+	RedisAddr  string
+	CacheTTL   time.Duration
 }
 
 func Load(ctx context.Context, consulAddr string) (*AppConfig, error) {
@@ -45,6 +48,12 @@ func Load(ctx context.Context, consulAddr string) (*AppConfig, error) {
 	cfg.HTTPPort = getKV("config/service2/http_port", cfg.HTTPPort)
 	cfg.DBDSN = getKV("config/service2/db_dsn", cfg.DBDSN)
 	cfg.HasherPort = getKV("config/grpc_port", cfg.HasherPort)
+	cfg.RedisAddr = getKV("config/service2/redis_addr", cfg.RedisAddr)
+	if ttlStr := getKV("config/service2/redis_ttl", ""); ttlStr != "" {
+		if d, err := time.ParseDuration(ttlStr); err == nil {
+			cfg.CacheTTL = d
+		}
+	}
 
 	return cfg, nil
 }
